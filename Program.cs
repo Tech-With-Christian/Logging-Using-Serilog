@@ -1,29 +1,26 @@
-﻿using Serilog;
+﻿using Microsoft.Extensions.Configuration;
+
+using Serilog;
+using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting.Json;
 
-Log.Logger = new LoggerConfiguration()
+var configuration = new ConfigurationBuilder()
+        .SetBasePath(Directory.GetCurrentDirectory())
+        .AddJsonFile("appsettings.json")
+        .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
+        .Build();
 
-    // Add console (Sink) as logging target
-    .WriteTo.Console()
+var logger = new LoggerConfiguration()
 
-    // Write logs to a file for warning and logs with a higher severity
-    // Logs are written in JSON
-    .WriteTo.File(new JsonFormatter(),
-        "important-logs.json",
-        restrictedToMinimumLevel: LogEventLevel.Warning)
-
-    // Add a log file that will be replaced by a new log file each day
-    .WriteTo.File("all-daily-.logs",
-        rollingInterval: RollingInterval.Day)
-
-    // Set default minimum log level
-    .MinimumLevel.Debug()
-
+    .ReadFrom.Configuration(configuration)
     // Create the actual logger
     .CreateLogger();
 
-Console.WriteLine("Hello, World!");
+logger.ForContext<Program>().Information("Hello World");
+logger.ForContext(Constants.SourceContextPropertyName, "TWC").Warning("Hola, I'm a Warning!");
+logger.ForContext(Constants.SourceContextPropertyName, "Microsoft").Error("Hello. This is Microsoft greeting!");
+
 
 Log.CloseAndFlush();
 
